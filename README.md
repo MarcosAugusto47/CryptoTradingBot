@@ -1,1 +1,2 @@
 # CryptoTradingBot
+This repository was iniatially based on the python code provided at https://medium.com/geekculture/building-a-basic-crypto-trading-bot-in-python-4f272693c375. I am now working on other features.
