@@ -41,11 +41,7 @@ def get_current_price(exchange_client, ticker, candle_duration_in_min):
     return current_price
 
 def get_trade_recommendation_MACD(ticker_df):
-    #rsi_oversold = RSI_OVERSOLD
-    #rsi_overbought = RSI_OVERBOUGHT
     macd_result = 'WAIT'
-    #bollinger_result = 'WAIT'
-    #final_result = 'WAIT'
 
     # BUY or SELL based on MACD crossover points and the RSI value at that point
     macd, signal, hist = talib.MACD(ticker_df['close'], fastperiod = 12, slowperiod = 26, signalperiod = 9)
@@ -63,12 +59,13 @@ def get_trade_recommendation_MACD(ticker_df):
 def get_trade_recommendation(ticker_df, rsi_oversold, rsi_overbought):
 
     macd_result = 'WAIT'
-    final_result = 'WAIT'
+    rsi_result = 'WAIT'
 
     # BUY or SELL based on MACD crossover points and the RSI value at that point
     macd, signal, hist = talib.MACD(ticker_df['close'], fastperiod = 12, slowperiod = 26, signalperiod = 9)
     last_hist = hist.iloc[-1]
     prev_hist = hist.iloc[-2]
+    
     if not np.isnan(prev_hist) and not np.isnan(last_hist):
         # If hist value has changed from negative to positive or vice versa, it indicates a crossover
         macd_crossover = (abs(last_hist + prev_hist)) != (abs(last_hist) + abs(prev_hist))
@@ -81,11 +78,12 @@ def get_trade_recommendation(ticker_df, rsi_oversold, rsi_overbought):
         last_rsi_values = rsi.iloc[-3:]
 
         if (last_rsi_values.min() <= rsi_oversold):
-            final_result = 'BUY'
+            rsi_result = 'BUY'
         elif (last_rsi_values.max() >= rsi_overbought):
-            final_result = 'SELL'
-    print("MACD Result:", macd_result, "Final Result:", final_result)
-    return final_result if final_result == macd_result else 'WAIT'
+            rsi_result = 'SELL'
+
+    #print("MACD Result:", macd_result, "Final Result:", rsi_result)
+    return rsi_result if rsi_result == macd_result else 'WAIT'
 
 def confirm_sell_operation(ticker_df, weight, exchange, ccxt_ticker_name, order_price):
     bollinger_result = 'WAIT'
@@ -113,7 +111,7 @@ def confirm_sell_operation(ticker_df, weight, exchange, ccxt_ticker_name, order_
             bollinger_result = 'SELL'
 
     if not np.isnan(last_price):
-        price_loss_limit = 0.992*order_price
+        price_loss_limit = 0.996*order_price
         lost_reached = last_price <= price_loss_limit
         if lost_reached:
             bollinger_result = 'SELL'
