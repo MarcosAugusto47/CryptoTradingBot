@@ -5,7 +5,8 @@ import time
 from datetime import datetime
 from binance.enums import *
 
-from utils.helpers import check_decimals, round_up, round_down
+from utils.helpers import round_down
+
 
 def fetch_data(exchange_client, ticker, candle_duration_in_min):
     bars, ticker_df = None, None
@@ -25,6 +26,7 @@ def fetch_data(exchange_client, ticker, candle_duration_in_min):
 
     return ticker_df
 
+
 def get_current_price(exchange_client, ticker, candle_duration_in_min):
     bars, ticker_df = None, None
 
@@ -40,11 +42,12 @@ def get_current_price(exchange_client, ticker, candle_duration_in_min):
 
     return current_price
 
+
 def get_trade_recommendation_MACD(ticker_df):
     macd_result = 'WAIT'
 
     # BUY or SELL based on MACD crossover points and the RSI value at that point
-    macd, signal, hist = talib.MACD(ticker_df['close'], fastperiod = 12, slowperiod = 26, signalperiod = 9)
+    macd, signal, hist = talib.MACD(ticker_df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
     last_hist = hist.iloc[-1]
     prev_hist = hist.iloc[-2]
 
@@ -56,13 +59,14 @@ def get_trade_recommendation_MACD(ticker_df):
 
     return macd_result
 
+
 def get_trade_recommendation(ticker_df, rsi_oversold, rsi_overbought):
 
     macd_result = 'WAIT'
     rsi_result = 'WAIT'
 
     # BUY or SELL based on MACD crossover points and the RSI value at that point
-    macd, signal, hist = talib.MACD(ticker_df['close'], fastperiod = 12, slowperiod = 26, signalperiod = 9)
+    macd, signal, hist = talib.MACD(ticker_df['close'], fastperiod=12, slowperiod=26, signalperiod=9)
     last_hist = hist.iloc[-1]
     prev_hist = hist.iloc[-2]
     
@@ -73,7 +77,7 @@ def get_trade_recommendation(ticker_df, rsi_oversold, rsi_overbought):
             macd_result = 'BUY' if last_hist > 0 else 'SELL'
 
     if macd_result != 'WAIT':
-        rsi = talib.RSI(ticker_df['close'], timeperiod = 14)
+        rsi = talib.RSI(ticker_df['close'], timeperiod=14)
         # Consider last 3 RSI values
         last_rsi_values = rsi.iloc[-3:]
 
@@ -82,8 +86,9 @@ def get_trade_recommendation(ticker_df, rsi_oversold, rsi_overbought):
         elif (last_rsi_values.max() >= rsi_overbought):
             rsi_result = 'SELL'
 
-    #print("MACD Result:", macd_result, "Final Result:", rsi_result)
+    print("MACD Result:", macd_result, "Final Result:", rsi_result)
     return rsi_result if rsi_result == macd_result else 'WAIT'
+
 
 def confirm_sell_operation(ticker_df, weight, exchange, ccxt_ticker_name, order_price):
     bollinger_result = 'WAIT'
@@ -111,7 +116,7 @@ def confirm_sell_operation(ticker_df, weight, exchange, ccxt_ticker_name, order_
             bollinger_result = 'SELL'
 
     if not np.isnan(last_price):
-        price_loss_limit = 0.996*order_price
+        price_loss_limit = 0.995*order_price
         lost_reached = last_price <= price_loss_limit
         if lost_reached:
             bollinger_result = 'SELL'
@@ -120,6 +125,7 @@ def confirm_sell_operation(ticker_df, weight, exchange, ccxt_ticker_name, order_
           f"Last price: {last_price}; Weighted Bollinger 1 Sigma:{weighted_upper_boll1_price}; Price Loss Limit: {price_loss_limit}")
     
     return bollinger_result
+
 
 def wait_operation_filling(binance_client, order):
     not_filled=True
@@ -130,37 +136,6 @@ def wait_operation_filling(binance_client, order):
             not_filled = not not_filled
         time.sleep(10)
 
-    #print("Order filled!")
-
-# def execute_trade(binance_client, trade_rec_type, trading_ticker, investiment_amount_dollars, decimals_quantity, holding_quantity):
-#     order_placed = False
-#     side_value = SIDE_BUY if (trade_rec_type == "BUY") else SIDE_SELL
-#     try:
-#         df = pd.DataFrame(binance_client.get_all_tickers())
-#         df = df[df.symbol == trading_ticker]
-#         if True:
-#             current_price = float(df['price'])
-#             script_quantity = round_up(investiment_amount_dollars/current_price, decimals_quantity) if trade_rec_type == "BUY" else holding_quantity
-#             print(f"PLACING ORDER {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}: "
-#                   f"{trading_ticker}, {side_value}, {current_price}, {script_quantity}, {int(time.time() * 1000)} ")
-            
-#             order_response = binance_client.create_order(symbol=trading_ticker,
-#                                                          side = side_value,
-#                                                          type=ORDER_TYPE_LIMIT,
-#                                                          timeInForce = TIME_IN_FORCE_GTC,
-#                                                          quantity=script_quantity,
-#                                                          price=str(current_price))
-                        
-#             print(f"ORDER PLACED")
-#             wait_operation_filling(binance_client, order_response)
-#             print(f"ORDER EXECUTED!")
-#             holding_quantity = script_quantity if trade_rec_type == "BUY" else holding_quantity
-#             order_placed = True
-
-#     except:
-#         print(f"\nALERT!!! UNABLE TO COMPLETE ORDER")
-    
-#     return order_placed, holding_quantity, current_price
 
 def execute_trade(binance_client, trade_rec_type, trading_ticker, investiment_amount_dollars, decimals_quantity, holding_quantity):
     order_placed = False
@@ -175,9 +150,9 @@ def execute_trade(binance_client, trade_rec_type, trading_ticker, investiment_am
                 f"{trading_ticker}, {side_value}, {current_price}, {script_quantity}, {int(time.time() * 1000)} ")
         
         order_response = binance_client.create_order(symbol=trading_ticker,
-                                                     side = side_value,
+                                                     side=side_value,
                                                      type=ORDER_TYPE_LIMIT,
-                                                     timeInForce = TIME_IN_FORCE_GTC,
+                                                     timeInForce=TIME_IN_FORCE_GTC,
                                                      quantity=script_quantity,
                                                      price=str(current_price))
                     
